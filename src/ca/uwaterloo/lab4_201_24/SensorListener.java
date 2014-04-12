@@ -1,0 +1,130 @@
+package ca.uwaterloo.lab4_201_24;
+
+
+import android.graphics.Color;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.widget.TextView;
+
+public class SensorListener implements SensorEventListener{
+    
+        //Float arrays for values of sensor events
+        private float[] values = {0,0,0};
+        //previous value used in the lowpass filter
+        private float previousLowValue = 0;
+        //vector sum of the three axis
+        private float vectorSum;
+        //step counter
+        private float steps = 0;
+        //finite stage machine
+        private int stage = 1;
+        //a clock of sorts used for step counter
+        private int iterator = 0;
+        //float used in the step counter
+        private float high = 0;
+        //orientation reference used to create concurrent mehtod running of Onsensorchanged and setValue of orientation
+		Orientation tmp;
+		private TextView output;
+		
+		//Constructor taking in the views that are used for outputting
+        public SensorListener(TextView outputView){
+        output = outputView;
+        }
+		
+        //Reference set to orientation that the listener is assigned to when MainActivity calls the Orientation class
+    	public void setO(Orientation O)
+    	{ 
+    		tmp = O; 
+    	}
+        //Zeros the steps
+        public void zeroSteps()
+        { 
+        	steps = 0; 
+        }
+        //get the steps
+        public float getLAccelSteps()
+        { 
+        	return steps ; 
+        }
+        //get the valeu sdisplayed on the graph
+        public float[] getValues()
+        { 
+        	return values; 
+        }
+        //not used
+        public void onAccuracyChanged(Sensor s, int i) {}
+        //lowpass takes in current values and stores previous to filter data
+        float lowpass(float in) {
+                    
+                    float out = previousLowValue;//previous lowpass is previous low values
+                    float l = 0.24f;//alpha
+                    
+                        out = l * in + (1-l) *out;
+                        previousLowValue = out;//previous value is current lowpass
+                
+                return out;
+            }
+        //A method used to fill the textview ference with the specific strings based on the sensor used
+        void setText(SensorEvent se, TextView output)
+        {
+        	if(se.sensor.getType() == Sensor.TYPE_LINEAR_ACCELERATION)
+            {
+        			output.setText(String.format("\nAcceleration:\nx: (%.1f)\ny: (%.1f)\nz: (%.1f)\nSteps: (%f)\n", 
+                        se.values[0], se.values[1], se.values[2], steps));//fill output for acceleration
+            }
+        	if(se.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD)
+            {
+        			output.setText(String.format("\nMagnetic Field:\nx: (%f)\ny: (%f)\nz: (%f)\n", 
+        				 se.values[0], se.values[1], se.values[2]));//fill output for magnetic
+            }
+        	output.setTextColor(Color.GREEN);
+        }
+  
+        @Override
+        public void onSensorChanged(SensorEvent se){
+                
+        		values = se.values.clone();
+        		
+                
+                if(se.sensor.getType() == Sensor.TYPE_LINEAR_ACCELERATION)
+                {
+                	vectorSum = (float) Math.pow((Math.pow(se.values[0], 2) + Math.pow(se.values[1], 2) + Math.pow(se.values[2], 2)), 1);//vectorsum squared to increase spikes in steps
+                	
+                	values[0] = lowpass(vectorSum);//sets the x output on the graph to vectorSum for output
+                   
+                   values[1] = 0;//ensure graph is not cluttered
+                   values[2] = 0;//ensure graph is not cluttered
+                   
+                   //finite state machine
+                   if((vectorSum > 10 && vectorSum < 25) || stage == 2)//stage one vector sum must get in between 10 and 25
+                   {
+                       if(vectorSum > high){ high = vectorSum;}//ensure that standing up or sitting down doesn't trigger step
+                       else{stage = 3;}
+                   }
+                   if(vectorSum < high*0.42 && stage == 3 )//vector sum must drop to 42% and stay for at least 18 iterations
+                   {
+                       iterator++;
+                   }
+                   else if(iterator > 18){iterator = 0;}
+                   
+                   if(iterator == 18)
+                   {
+                       steps++;
+                       iterator = 0;
+                       stage =1;
+                   }
+                   output.setText(String.format("\nSteps (%.0f)",steps));
+                }
+                if(se.sensor.getType() == Sensor.TYPE_ACCELEROMETER)
+                {
+                	tmp.setValue(se);//set the gravity values for orient
+                }
+                if(se.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD)
+                {
+                	tmp.setValue(se);//set the magnetic values for orient
+                }
+                output.setTextColor(Color.GREEN);
+                output.setTextSize(25);
+         }   
+}//End SensorListener
