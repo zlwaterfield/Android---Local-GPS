@@ -17,7 +17,7 @@ import android.util.Log;
 import android.widget.TextView;
 
 public class Orientation {
-		
+	
 		private SensorListener Accels, Magn, LinearAccels;
 		private TextView orient, distanceTxt, distanceTxt2;
 		private float[] geoMag, gravity, orientation = new float[3];
@@ -34,7 +34,7 @@ public class Orientation {
 		//Constructor takes in 3 sensorlisteners and an output view
 		public Orientation(SensorListener A, SensorListener M, SensorListener LA, TextView output)
 		{
-			//Create local references to the sensorlisteners in MainActivity
+			//create local references to the sensorlisteners in MainActivity
 			Accels = A;
 			Magn = M;
 			LinearAccels = LA;
@@ -44,10 +44,9 @@ public class Orientation {
 			Magn.setO(this);
 			LinearAccels.setO(this);
 			
-			//Reference local orient to textview output to alow refernce updating
+			//reference local orient to textview output to alow refernce updating
 			orient = output;
-			
-			//Using the Accelerometer we get the acceleration values to create a local copy of them (thus using clone())
+			//using the Accelerometer we get the acceleration values to create a local copy of them (thus using clone())
 			orientation = A.getValues().clone();
 		}
 		
@@ -66,6 +65,7 @@ public class Orientation {
 		{
 			
 			direction = orientation[0];
+			
 			directions[0] = (float) Math.cos(direction);
 			directions[1] = (float) Math.sin(direction);
 		}
@@ -75,7 +75,7 @@ public class Orientation {
 			return orientation;
 		}
 		
-		//Used to get reference to the orient textview for updating in Main
+		//used to get reference to the orient textview for updating in Main
 		public TextView getOrientationView() {
 			return orient;
 		}
@@ -95,7 +95,6 @@ public class Orientation {
 		{
 			this.distanceTxt = distanceT;
 		}
-		
 		public void finishI(TextView distanceT2) 
 		{
 			this.distanceTxt2 = distanceT2;
@@ -109,7 +108,6 @@ public class Orientation {
 				gravity = se.values.clone();//don't assign a reference but a local copy
 				
             }
-			
 			if(se.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD)//when called by Magnetic sensor
             {
 				geoMag = se.values.clone();//don't assign a reference but a local copy

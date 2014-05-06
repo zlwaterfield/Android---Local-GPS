@@ -21,52 +21,46 @@ import android.widget.TextView;
 
 public class MainActivity extends Activity implements PositionListener{
     
-	//Sensor Variables
+    
     public SensorManager sensorManager;
     public Sensor accelerometerSensor, magneticfieldSensor, lAccelerometerSensor;
     public SensorListener lAccel, Magn, Accel;
-    public TextView LAsensor, mfsensor, asensor, orientTxt, distanceT, distancet2;
+    public TextView LAsensor, mfsensor, asensor, orientTxt, distanceT;
     Button pButton, sButton, rButton, cButton, uButton;
     Orientation orient;
     
-    //Map Variables
+    LinearLayout ll;
+    TextView title;
+    PointF scale = new PointF(40, 40);
+    
     MapView mv;
 	private TextView start;
 	private TextView end;
 	private TextView instructions;
-	PointF scale = new PointF(40, 40);
-	
-	//Misc Variables
-    LinearLayout ll;
-    TextView title;
 	
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         
-        //Reset Button
+        //Organize the layouts
         ll = (LinearLayout) findViewById(R.id.label1);
         //Set the texts for title to author names 
         ll.setOrientation(LinearLayout.VERTICAL);
          
         Button rpButton = (Button) this.findViewById(R.id.resetPath);
         rpButton.setOnClickListener(new OnClickListener() {
-	        @Override
-	        public void onClick(View v) {
-	        	orient.resetPath();
-	        }
+        @Override
+        public void onClick(View v) {
+        	orient.resetPath();
+        }
         });
        
-        //Text views that are used to output the values
+        
+        //instantiat the text views that are used to output the values
         orientTxt = new TextView(getApplicationContext());//orient view
         distanceT = new TextView(getApplicationContext());//distance view
-        distancet2 = new TextView(getApplicationContext());//distance view
-        start = new TextView(getApplicationContext()); //Start position
-        end = new TextView(getApplicationContext());//End position
-        instructions =  new TextView(getApplicationContext());//Instructions for user
        
-        //Creating sensors
         LAsensor = new TextView(getApplicationContext());//needed for LinearAccelerometer
         lAccel = new SensorListener(LAsensor); //Sensor listener controls Linear Accel sensor
         
@@ -75,31 +69,40 @@ public class MainActivity extends Activity implements PositionListener{
        
         mfsensor = new TextView(getApplicationContext());//needed for Magnetic 
         Magn = new SensorListener(mfsensor);//Sensor listener controls Magn sensor
+       
+        orient = new Orientation(Accel, Magn, lAccel, orientTxt); //New orientation using th three sensors and a textview for updating
         
-        //New orientation using the three sensors and a textview for updating
-        orient = new Orientation(Accel, Magn, lAccel, orientTxt); 
+        start = new TextView(getApplicationContext()); 
+        end = new TextView(getApplicationContext());
         
-        //Creating MapView
-        mv = new MapView(getApplicationContext(), 400, 400, 23,23);
+        distanceT  =  new TextView(getApplicationContext());
+        instructions =  new TextView(getApplicationContext());
+
+        mv = new MapView(getApplicationContext(), 1600, 1600, 55,55);
         registerForContextMenu(mv);
        
-        //Calling external map 
-        NavigationalMap map = MapLoader.loadMap(getExternalFilesDir(null), "room.svg");
+        NavigationalMap map = MapLoader.loadMap(getExternalFilesDir(null), "room.svg"
+        		//"Lab-room-bonus-destination-and-start.svg"
+				//"Lab-room-inclined-9.4deg.svg"
+				//"Lab-room-inclined-16deg.svg"
+				//"Lab-room-peninsula-9.4deg.svg"
+				//"Lab-room-peninsula-16deg.svg"
+				//"Lab-room-peninsula.svg"
+				//"Lab-room-unconnected.svg"
+        		);
         
-        //Adding views
         ll.addView(start);
         ll.addView(end);
         ll.addView(instructions);
         ll.addView(distanceT);
-        ll.addView(distancet2);
         
         mv.setMap(map);
         mv.addListener(this);
         orient.setMap(map);
         
+       
         sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);//new sensormanager instantiated
         
-        //Registering sensors
         lAccelerometerSensor = sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);//make Laccel a linear sensor
         sensorManager.registerListener(lAccel , lAccelerometerSensor,SensorManager.SENSOR_DELAY_FASTEST);//register lAccel sensor
        
@@ -109,14 +112,14 @@ public class MainActivity extends Activity implements PositionListener{
         magneticfieldSensor = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);//make magnet a magnetic sensor
         sensorManager.registerListener(Magn, magneticfieldSensor,SensorManager.SENSOR_DELAY_FASTEST);//register mag sensor
        
-        //Outputting textViews to the view
         orient.setMapview(mv);
         orient.setInstructions(instructions);
         orient.finishInstructions(distanceT);
-        orient.finishI(distancet2);
-        ll.addView(mv);    
+        ll.addView(mv);
+        
+        
+         
     }
-    
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.main, menu);
@@ -125,26 +128,27 @@ public class MainActivity extends Activity implements PositionListener{
     
     @Override
     public void onCreateContextMenu(ContextMenu menu, View v, ContextMenuInfo menuInfo) {
-    	super.onCreateContextMenu(menu, v, menuInfo);
-    	mv.onCreateContextMenu(menu, v, menuInfo);
+    super.onCreateContextMenu(menu, v, menuInfo);
+    mv.onCreateContextMenu(menu, v, menuInfo);
     }
     
     @Override
     public boolean onContextItemSelected(MenuItem item) {
-    	return super.onContextItemSelected(item) || mv.onContextItemSelected(item);
+    return super.onContextItemSelected(item) || mv.onContextItemSelected(item);
     }
     
 	@Override
 	public void originChanged(MapView source, PointF loc) {
+		
 		start.setText(String.format("Start: x: (%.2f) y:(%.2f) ", loc.x, loc.y));
 		mv.setUserPoint(loc);
 	}
-	
 	@Override
 	public void destinationChanged(MapView source, PointF dest) {
 		end.setText(String.format("End: x: (%.2f) y:(%.2f) ", dest.x, dest.y ));
 		if(mv.getDestinationPoint()== mv.getOriginPoint())
 			mv.setDestinationPoint(new PointF(0,0));
+		
 	}
 	
 	@Override
@@ -152,16 +156,17 @@ public class MainActivity extends Activity implements PositionListener{
     public void onPause() {
 
 	    super.onPause();
+
 	    sensorManager.unregisterListener(lAccel, lAccelerometerSensor);
 	    sensorManager.unregisterListener(Accel, accelerometerSensor);
 	    sensorManager.unregisterListener(Magn, magneticfieldSensor);
 	}
-	
 	//This method checks to see if the application is resumed by user,
 	//if it is then the sensors are re-registered (listened to)
 	public void onResume() {
 
 	    super.onResume();
+
 	    sensorManager.registerListener(lAccel, lAccelerometerSensor,SensorManager.SENSOR_DELAY_FASTEST);
 	    sensorManager.registerListener(Accel, accelerometerSensor,SensorManager.SENSOR_DELAY_NORMAL);
 	    sensorManager.registerListener(Magn, magneticfieldSensor,SensorManager.SENSOR_DELAY_FASTEST);

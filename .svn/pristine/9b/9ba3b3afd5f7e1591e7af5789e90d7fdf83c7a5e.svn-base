@@ -8,7 +8,6 @@ import mapper.LineSegment;
 import mapper.MapView;
 import mapper.NavigationalMap;
 import mapper.VectorUtils;
-import android.graphics.Color;
 import android.graphics.PointF;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -17,9 +16,9 @@ import android.util.Log;
 import android.widget.TextView;
 
 public class Orientation {
-		
+	
 		private SensorListener Accels, Magn, LinearAccels;
-		private TextView orient, distanceTxt, distanceTxt2;
+		private TextView orient, distanceTxt;
 		private float[] geoMag, gravity, orientation = new float[3];
 		private float[] distance = new float[2];
 		private float[] directions = new float[2];
@@ -34,7 +33,7 @@ public class Orientation {
 		//Constructor takes in 3 sensorlisteners and an output view
 		public Orientation(SensorListener A, SensorListener M, SensorListener LA, TextView output)
 		{
-			//Create local references to the sensorlisteners in MainActivity
+			//create local references to the sensorlisteners in MainActivity
 			Accels = A;
 			Magn = M;
 			LinearAccels = LA;
@@ -44,11 +43,11 @@ public class Orientation {
 			Magn.setO(this);
 			LinearAccels.setO(this);
 			
-			//Reference local orient to textview output to alow refernce updating
+			//reference local orient to textview output to alow refernce updating
 			orient = output;
-			
-			//Using the Accelerometer we get the acceleration values to create a local copy of them (thus using clone())
+			//using the Accelerometer we get the acceleration values to create a local copy of them (thus using clone())
 			orientation = A.getValues().clone();
+			direction = getDirection(orientation[0]);
 		}
 		
 		public void setMap(NavigationalMap map) 
@@ -65,7 +64,10 @@ public class Orientation {
 		public void addDistance()
 		{
 			
-			direction = orientation[0];
+			direction = getDirection(orientation[0]);
+			
+			distance[0] += (float) Math.cos(direction);	//North is cosine of orientation azimuth
+			distance[1] += (float) Math.sin(direction);	//East is sin of orientation azimuth
 			directions[0] = (float) Math.cos(direction);
 			directions[1] = (float) Math.sin(direction);
 		}
@@ -75,7 +77,7 @@ public class Orientation {
 			return orientation;
 		}
 		
-		//Used to get reference to the orient textview for updating in Main
+		//used to get reference to the orient textview for updating in Main
 		public TextView getOrientationView() {
 			return orient;
 		}
@@ -96,11 +98,6 @@ public class Orientation {
 			this.distanceTxt = distanceT;
 		}
 		
-		public void finishI(TextView distanceT2) 
-		{
-			this.distanceTxt2 = distanceT2;
-		}
-		
 		//Taking in a sensor event se this method runs conncurently to onsensorChanged in sensor listener to get the acceleration and/or magnetic values
 		public void setValue(SensorEvent se)
 		{
@@ -109,7 +106,6 @@ public class Orientation {
 				gravity = se.values.clone();//don't assign a reference but a local copy
 				
             }
-			
 			if(se.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD)//when called by Magnetic sensor
             {
 				geoMag = se.values.clone();//don't assign a reference but a local copy
@@ -160,25 +156,17 @@ public class Orientation {
 		 				this.addDistance();//calls the addDistance to add to the distances of North and East
 		 				checkSteps = stepsC;
 		 				PointF a = new PointF(mv.getUserPoint().x, mv.getUserPoint().y);
-		 				PointF b = new PointF(mv.getUserPoint().x + (directions[0]/2.5f), 
-		 										mv.getUserPoint().y + (directions[1]/2.5f));
+		 				PointF b = new PointF(mv.getUserPoint().x + (directions[0]/3f), 
+		 										mv.getUserPoint().y + (directions[1]/3f));
 		 				
-		 				//calls canMove Method
 		 				if(canMove(a, b))
 		 				{
 		 					mv.setUserPoint(b);
 		 					mv.setUserPath(createUserPath(b, mv.getDestinationPoint()));
-		 					//checks if finshed then output text
-							if(finish())
+		 					if(finish())
 		 					{
-		 						distanceTxt2.setText("WOW GOOD JOB! YOU CAN FOLLOW A PREDEFINE PATH THAT I " +
-		 								"WORKED TIRLESSLY ON PRODUCING, SO THAT YOU KNOW HOW TO MANUEVER " +
-		 								"AROUND TABLES AND CHAIRS WITHOUT BREAKING YOUR SHINS D=<");
+		 						distanceTxt.setText("GOOD JOB!");
 		 					}
-							else{
-								distanceTxt2.setText("");
-							}
-		 					distanceTxt2.setTextColor(Color.MAGENTA);//color
 		 				}
 		 				checkInstructions(a, b);
 		 			}
@@ -186,29 +174,24 @@ public class Orientation {
 	  	 	}
 		}
 		
-		//checks cases to output text
 		private void checkInstructions(PointF start, PointF end) 
 		{
 			
 			String a = "", b = "", c = "";
 			
-			//makes sures user has picked starting and destination position
 			if(mv.getDestinationPoint().x == 0 && mv.getDestinationPoint().y == 0 ||
 					mv.getOriginPoint().x == 0 && mv.getOriginPoint().y == 0)
 			{
 				a = "\n -You must select a destination and starting point";
 			}
-			//makes sure starting and destination point arent the same
 			if(VectorUtils.areEqual(mv.getDestinationPoint(), mv.getOriginPoint()))
 			{
 				b = "\n -Try selcting your points again";
 			}
-			//lets user know if they hit a wall
 			if(n.calculateIntersections(start, end).size() != 0 && start.x != 0 && start.y != 0)
 			{
 				c = "\n -You hit a wall and cannot go this way";
 			}
-			//outputs text
 			instructions.setText(a + b + c + String.format("\n\nCurrently North: (%.2f)",direction));
 		}
 		
@@ -218,7 +201,6 @@ public class Orientation {
 			mv.setUserPath(createUserPath(a, mv.getDestinationPoint()));
 		}
 		
-		//checks cases to see if the point can move
 		public boolean canMove(PointF a, PointF b)
 		{
 			PointF aa = new PointF(a.x, a.y);
@@ -235,7 +217,6 @@ public class Orientation {
 			return false;
 		}
 		
-		//creates path from starting point to destination
 		public List<PointF> createUserPath(PointF a, PointF c)
 		{
 			List<PointF> path = new ArrayList<PointF>();
@@ -269,7 +250,6 @@ public class Orientation {
 			return path;
 		}
 		
-		//finds intersections and create alternate path
 		private PointF alternatePath(InterceptPoint i, PointF endB) 
 		{
 			LineSegment wall = i.getLine();
@@ -277,8 +257,7 @@ public class Orientation {
 			float[] Point = {0,0};
 			PointF pathIdeal = new PointF();
 			PointF pathDir;
-				
-				//finds both ends of walls  and sees which one is closer
+			
 				if(VectorUtils.distance(wall.start, endB) > VectorUtils.distance(wall.end, endB)){
 					
 					pathIdeal = wall.end;
@@ -298,14 +277,12 @@ public class Orientation {
 			return pathDir;
 		}
 		
-		//checks if user has finished 
 		public boolean finish()
 		{
 			PointF user = new PointF(mv.getUserPoint().x, mv.getUserPoint().y);
 			PointF dest = new PointF(mv.getDestinationPoint().x, mv.getDestinationPoint().y);
 			
-			//checks if user is within 0.5 of destination
-			if(Math.abs(dest.x - user.x) <  0.5 && Math.abs(dest.y - user.y) <  0.5)
+			if(Math.abs(dest.x - user.x) <  5 && Math.abs(dest.y - user.y) <  5)
 			{
 				return true;
 			}
