@@ -10,4 +10,4 @@ On screen the app displays:
 * North and East displacement from Start location
 * Buttons to reset path
 
-![alt text](http://zlw.me/github/localgps.png "Local GPS")
+![alt text](http://zlwaterfield.com/github/localgps.png "Local GPS")
